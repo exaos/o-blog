@@ -117,6 +117,10 @@ This is a good place for o-blog parser plugins."
  - disqus: disqus account (called a forum on Disqus) this system
    belongs to. Defined by the \"#DISQUS\" header.
 
+ - analytics: Property ID (UA-XXXXX-Y) of google analytics
+   account to use for analytics on this site. Defined by the
+   \"#ANALYTICS\" header.
+
  - filename-sanitizer: 1-argument function to be used to sanitize
    post filenames. Defined by \#+FILENAME_SANITIZER:\" or
    \"ob-sanitize-string\".
@@ -132,6 +136,11 @@ This is a good place for o-blog parser plugins."
  - post-htmlfile: a 3-argument function to be used to generate
    the post html filename in output directory. Defined by
    \"#+POSTS_HTMLFILE:\" or \"ob-set-default-htmlfile\".
+
+ - plugin-qrcode: \"t\" or \"nil\". Enables the plugin-qrcode
+   that uses chart.apis.google.com. Default is \"t\" for backward
+   compatibility.  Defined by the \"#PLUGIN_QRCODE\" header.
+
 "
   (file nil :read-only)
   (buffer nil :read-only)
@@ -149,10 +158,12 @@ This is a good place for o-blog parser plugins."
   post-build-shell
   default-category
   disqus
+  analytics
   filename-sanitizer
   posts-sorter
   posts-filepath
-  posts-htmlfile)
+  posts-htmlfile
+  plugin-qrcode)
 
 
 (defstruct (ob:post :named)
@@ -417,7 +428,7 @@ A copy function COPYF and its arguments ARGS could be specified."
 			     "-l" ,(concat (file-name-as-directory
 					    user-emacs-directory)
 					   "init.el")
-			     ,@ob-async-opts
+			     ,@o-blog-async-opts
 			     "--eval"
 			     ,(format "(org-publish-blog \"%s\")" file))))
 	 (cmd-buf (get-buffer-create (format "ORG blog build %s" file)))
@@ -513,6 +524,8 @@ A copy function COPYF and its arguments ARGS could be specified."
     (setf (ob:blog-post-build-shell blog) (ob:get-header "POST_BUILD_SHELL" t))
     (setf (ob:blog-default-category blog) (or (ob:get-header "DEFAULT_CATEGORY") "Blog"))
     (setf (ob:blog-disqus blog) (ob:get-header "DISQUS"))
+    (setf (ob:blog-analytics blog) (ob:get-header "ANALYTICS"))
+    (setf (ob:blog-plugin-qrcode blog) (string-equal (or (ob:get-header "PLUGIN_QRCODE") "t") "t"))
     (setf (ob:blog-filename-sanitizer blog)
 	  (let ((ofs (ob:get-header "FILENAME_SANITIZER")))
 	    (if (and ofs (functionp (intern ofs)))
@@ -705,11 +718,14 @@ headers and body."
 	(ob-write-file saved-file))
       (setq ret (substring-no-properties
 		 ;; `org-export-as-html' arguments has changed on new
-		 ;; org-version. First try old function signature, then on
-		 ;; faillure use new argument call.
+		 ;; org-version, then again with the new exporter.
+		 ;; First try old function signatures, then on failure
+		 ;; use new argument call.
 		 (or
 		  (ignore-errors (org-export-as-html nil nil nil 'string t))
-		  (org-export-as-html nil nil 'string t))))
+		  (ignore-errors (org-export-as-html nil nil 'string t))
+		  (ignore-errors (org-export-as 'html nil nil t nil))
+		  (org-export-as-html nil nil 'string nil nil))))
       (when saved-file
 	(delete-file saved-file))
       ret)))

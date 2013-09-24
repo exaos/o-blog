@@ -1,10 +1,10 @@
 <lisp>(ob:insert-template "page_header.html")</lisp>
-<article>
+<div class="article">
   <header class="article-header">
     <div class="well">
       <div class="row">
 	<div class="span1">
-	  <lisp>(ob:insert-template "plugin_qrcode.html")</lisp>
+	  <lisp>(when (ob:blog-plugin-qrcode BLOG) (ob:insert-template "plugin_qrcode.html"))</lisp>
 	</div>
 	<h1 class="offset1" style="font-size: 250%;"><lisp>(ob:post-title POST)</lisp></h1>
       </div>
@@ -28,5 +28,5 @@
       </div>
     </nav>
   </div>
-</article>
-<lisp>(ob:insert-template "page_footer.html")</lisp>    
+</div>
+<lisp>(ob:insert-template "page_footer.html")</lisp>
